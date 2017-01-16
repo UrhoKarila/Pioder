@@ -1,0 +1,65 @@
+Arduino talks with pi
+pi interprets commands -- email or other triggers
+parses things or chooses color
+Determines what easing to choose
+Determines whether to insert color into cycle, and where, or if to overwrite cycle entirely
+
+Allow selection of 'background' color
+	color-picker front-end?
+
+Triggers to insert 'alert' colors in between background
+
+Pi should be to send messages with the following layout:
+
+-	Color/Control Identifier
+		Value to differentiate between whether the message is intended to change the color of a strip or to pass control messages
+CONTROL -	2 bytes
+
+	Control messages are 2 bytes total. The first byte is reserved as control codes, the last byte is used for data transmission.
+	Control messages that do not requre additional control data must send a second byte regardless
+
+	0x00:	Deluminate. This should not clear memory, just prevent illumination
+		Although power is still present, the strips should not light up.
+	0x01:	Illuminate
+		Re-enable illumination of the strips.
+	0x02:	Suppress Alerts
+		Disable alerts interrupting background 
+	0x03:	Enable Alerts
+		Re-enable alert interruptions
+	0x04:	Dim
+		Make global change to brightness - this should affect all LEDs equally.
+	0x05:	Clear
+		Clear TRANSITION QUEUE
+		Data byte used to specify which port to clear
+			0x00 clears all TRANSITION QUEUE
+		
+		A data value is presumed to be passed along with this control code
+		Data can be between 0x00 and 0xFF
+		0xFF will be interpreted as full brightness
+
+COLOR
+-	Port Identifier. 
+		The controller is expected to support two strips, which can be set independently.
+		An incorrect ID SHOULD result in no change to any strips.
+		The value 0 SHOULD affect both strips
+-	alert bit.	If set, the color SHOULD be added to an ALERT QUEUE, which will be displayed & cleared at the next regular transition on the specified port
+				If not set, the color SHOULD be added to the TRANSITION QUEUE, and will remain there until cleared through a CONTROL message
+-	Transition Duration
+		MUST be positive -- unsigned?
+		Used to tell how long, in ms, the Transition Effect will last when moving between colors. A value of 0 effectively removes the transition
+-	Transition style:
+		Controls what style colors are mixed in. 
+			0:	Linear Easing
+			1:	QuadIn
+			2:	QuadOut
+			3:	QuadInOut
+- 	Color
+		3 bytes in RGB order
+		valid values between 0x00 and 0xFF, with 0xFF corresponding to 'bright'
+
+
+
+ARDUINO
+Should be able to push data out to 6 pins - all PWM
+
+Receives control messages from Pi, and should follow specifications there.
