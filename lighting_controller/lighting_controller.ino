@@ -11,9 +11,9 @@ const int array_size = 32;
 const bool debug_mode_enabled = true;
 
 typedef struct {
-  byte r;
-  byte g;
-  byte b;
+  uint8_t r;
+  uint8_t g;
+  uint8_t b;
   uint16_t duration;
   uint8_t transition_style;
   bool is_alert;
@@ -42,6 +42,9 @@ void setup() {
     ; // wait for serial port to connect. Needed for native USB
   }
 
+  Serial.println(F("Setup in progress"));
+
+  delay(500);
 
   Lighting DEFAULTLIGHTING;
   DEFAULTLIGHTING.r = 0;
@@ -52,6 +55,9 @@ void setup() {
   DEFAULTLIGHTING.is_alert = false;
   DEFAULTLIGHTING.is_good = true;
 
+  delay(500);
+  Serial.println(F("Running tests"));
+  delay(500);
   runtests();
   
   Port left;
@@ -142,6 +148,10 @@ Lighting* getNextTransition(Port* p){
   }
 }
 
+void addLighting(Port* p, Lighting* l){
+
+}
+
 void loop() {
 //Read from Serial to see if there's anything to update
 
@@ -167,8 +177,8 @@ float easeInOutQuint(float t) { return t<.5 ? 16*t*t*t*t*t : 1+16*(--t)*t*t*t*t;
 
 void runtests(){
   int a = 0;
-  assert(a==1);
-  Serial.println("Sanity check passed");
+  assert(a==0);
+  Serial.println(F("Sanity check passed"));
   Lighting L1;
   L1.r = 0;
   L1.g = 0;
@@ -179,9 +189,9 @@ void runtests(){
   L1.is_good = true;
 
   assert(L1.r == 0);
-  Serial.println("Can create and assign bytes to Lighting Objects");
+  Serial.println(F("Can create and assign bytes to Lighting Objects"));
   assert(L1.is_good == true);
-  Serial.println("Seems like the Lighting L1 is good");
+  Serial.println(F("Seems like the Lighting L1 is good"));
 
   Lighting L2;
   L2.r = 255;
@@ -191,22 +201,22 @@ void runtests(){
   L2.transition_style = 1;
   L2.is_alert = false;
   L2.is_good = true;
-  Serial.println("No errors while creating L2");
+  Serial.println(F("No errors while creating L2"));
 
   Lighting emptyLighting;
   assert(emptyLighting.r == 0);
   assert(emptyLighting.g == 0);
-  Serial.println("emptyLighting initialized to 0 for RGB");
+  Serial.println(F("emptyLighting initialized to 0 for RGB"));
   assert(emptyLighting.is_good == false);
   assert(emptyLighting.is_alert == false);  
-  Serial.println("emptyLighting defaults to false where applicable");
+  Serial.println(F("emptyLighting defaults to false where applicable"));
 
   assert(L2.is_good == true);
   assert(L2.r == 255);
-  Serial.println("L2 is as expected");
+  Serial.println(F("L2 is as expected"));
   assert(L1.r != L2.r);
   assert(L1.g == L2.g);
-  Serial.println("Comparisons between Lightings work fine.");
+  Serial.println(F("Comparisons between Lightings work fine."));
 
   Port P1;
   P1.pins[RED] = 3;
@@ -218,10 +228,12 @@ void runtests(){
   assert(P1.address == 1);
   assert(P1.pins[0] == 3);
   assert(P1.current_transition_index == 0);
-  Serial.println("P1 seems to have been created as expected.");
+  Serial.println(F("P1 seems to have been created as expected."));
   assert(P1.transitions[0].r == 0);
   assert(P1.transitions[1].r == 0);
 
-//  addLighting(P1, L1);
+  delay(50000);
+
+  addLighting(&P1, &L1);
 
 }
