@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <stdio.h>
 //int LED_pin = 3;
 //int pins[] = {3,5,6};
 
@@ -149,7 +150,18 @@ Lighting* getNextTransition(Port* p){
 }
 
 void addLighting(Port* p, Lighting* l){
-
+  //Find the first available slot in the appropriate Queue for p, then stuff l in there
+  Lighting* q;
+  if(l->is_alert){
+    q = p->alerts;
+  }
+  else{
+    q = p->transitions;
+  }
+  while(q->is_good){
+    q++;
+  }
+  memcpy(q, l, sizeof(Lighting));
 }
 
 void loop() {
@@ -193,6 +205,8 @@ void runtests(){
   assert(L1.is_good == true);
   Serial.println(F("Seems like the Lighting L1 is good"));
 
+delay(500);
+
   Lighting L2;
   L2.r = 255;
   L2.g = 0;
@@ -203,20 +217,26 @@ void runtests(){
   L2.is_good = true;
   Serial.println(F("No errors while creating L2"));
 
+  delay(500);
+
   Lighting emptyLighting;
-  assert(emptyLighting.r == 0);
-  assert(emptyLighting.g == 0);
-  Serial.println(F("emptyLighting initialized to 0 for RGB"));
-  assert(emptyLighting.is_good == false);
-  assert(emptyLighting.is_alert == false);  
-  Serial.println(F("emptyLighting defaults to false where applicable"));
+  Serial.println(F("Created emptyLighting"));
+  emptyLighting.r = 0;
+  emptyLighting.g = 0;
+  emptyLighting.b = 0;
+  emptyLighting.duration = 0;
+  emptyLighting.transition_style = 0;
+  emptyLighting.is_alert = 0;
+  emptyLighting.is_good = 0;
 
   assert(L2.is_good == true);
   assert(L2.r == 255);
   Serial.println(F("L2 is as expected"));
+  delay(500);
   assert(L1.r != L2.r);
   assert(L1.g == L2.g);
   Serial.println(F("Comparisons between Lightings work fine."));
+  delay(500);
 
   Port P1;
   P1.pins[RED] = 3;
@@ -232,8 +252,38 @@ void runtests(){
   assert(P1.transitions[0].r == 0);
   assert(P1.transitions[1].r == 0);
 
-  delay(50000);
-
+  Serial.println(F("Testing addLighting"));
+  assert(P1.transitions[0].is_good == 0);
+  delay(500);
   addLighting(&P1, &L1);
+  assert(P1.transitions[0].is_good == 1);
+  Serial.println(F("Is now good"));
+  delay(500);
+  assert(P1.transitions[0].r == L1.r);
+  assert(P1.transitions[0].g == L1.g);
+  assert(P1.transitions[0].b == L1.b);
+  assert(P1.transitions[0].duration == L1.duration);
+  assert(P1.transitions[0].transition_style == L1.transition_style);
+  assert(P1.transitions[0].is_alert == L1.is_alert);
+  assert(P1.transitions[0].is_good == L1.is_good);
+  Serial.println(F("First lighting added ok"));
+
+  delay(500);
+
+  assert(P1.transitions[1].is_good == 0);
+  addLighting(&P1, &L2);
+  assert(P1.transitions[1].is_good == 1);
+  Serial.println(F("Is now good"));
+  assert(P1.transitions[1].r == L2.r);
+  assert(P1.transitions[1].g == L2.g);
+  assert(P1.transitions[1].b == L2.b);
+  assert(P1.transitions[1].duration == L2.duration);
+  assert(P1.transitions[1].transition_style == L2.transition_style);
+  assert(P1.transitions[1].is_alert == L2.is_alert);
+  assert(P1.transitions[1].is_good == L2.is_good);
+  Serial.println(F("Second lighting added ok"));
+
+  Serial.println(F("addLighting complete"));
+  delay(50000);
 
 }
