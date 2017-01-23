@@ -1,11 +1,11 @@
 #include <assert.h>
-#include <stdio.h>
+//#include <stdio.h>
 //int LED_pin = 3;
 //int pins[] = {3,5,6};
 
 const int RED = 0;          //Used to position RED within the array
-const int GREEN = 2;        // Because the pins on the DIODER are in RBG ordering. Don't ask me
-const int BLUE = 1;         // ---------------"-----------------
+const int GREEN = 1;        // Because the pins on the DIODER are in RBG ordering. Don't ask me
+const int BLUE = 2;         // ---------------"-----------------
 const uint8_t port_qty = 2; //Number of 'ports' supported -- I.E., how many independent controls for Lighting are supplied. This is related to the hardware you're running on.
 const int tick_rate = 1;    //How often to update lights, in ms
 const int array_size = 32;
@@ -25,6 +25,7 @@ typedef struct {
   Lighting transitions[array_size];
   Lighting alerts[array_size];
   uint8_t pins[3];
+  uint8_t colors[3];
   uint8_t address;
   uint16_t clock;
   Lighting* current_lighting;
@@ -35,7 +36,7 @@ typedef struct {
 
 Port ports[port_qty];       //create array of ports
 Lighting DEFAULTLIGHTING;
-
+Lighting NULL_LIGHTING;
 
 void setup() {
   Serial.begin(9600); 
@@ -51,10 +52,18 @@ void setup() {
   DEFAULTLIGHTING.r = 0;
   DEFAULTLIGHTING.g = 0;
   DEFAULTLIGHTING.b = 0;
-  DEFAULTLIGHTING.duration = 0;
+  DEFAULTLIGHTING.duration = 100;
   DEFAULTLIGHTING.transition_style = 0;
   DEFAULTLIGHTING.is_alert = false;
   DEFAULTLIGHTING.is_good = true;
+
+  NULL_LIGHTING.r = 0;
+  NULL_LIGHTING.g = 0;
+  NULL_LIGHTING.b = 0;
+  NULL_LIGHTING.duration = 0;
+  NULL_LIGHTING.transition_style = 0;
+  NULL_LIGHTING.is_alert = false;
+  NULL_LIGHTING.is_good = false;
 
   delay(500);
   Serial.println(F("Running tests"));
@@ -62,11 +71,12 @@ void setup() {
   runtests();
   
   Port left;
-    left.pins[RED] = 3;
-    left.pins[GREEN] = 5;
-    left.pins[BLUE] = 6;
-    left.address = 1;
-    left.current_transition_index = 0;
+  left.pins[RED] = 3;
+  left.pins[GREEN] = 6;
+  left.pins[BLUE] = 5;
+  left.address = 1;
+  left.current_transition_index = 0;
+  memcpy(&left->old_lighting, &DEFAULTLIGHTING, sizeof(Lighting));
 
   for(int i = 0; i < 3; i++){
     pinMode(left.pins[i], OUTPUT);
@@ -74,14 +84,16 @@ void setup() {
 
   Port right;
   right.pins[RED] = 9;
-  right.pins[GREEN] = 10;
-  right.pins[BLUE] = 11;
+  right.pins[GREEN] = 11;
+  right.pins[BLUE] = 10;
   right.address = 2;
   right.current_transition_index = 0;
+  memcpy(&right->old_lighting, &DEFAULTLIGHTING, sizeof(Lighting));
   
   for(int i = 0; i < 3; i++){
     pinMode(right.pins[i], OUTPUT);
   }
+
 
   ports[0] = left;
   ports[1] = right;
@@ -108,7 +120,10 @@ void tick(Port* port){
     if(!port->current_lighting->is_good){
       getNextTransition(port);
     }
-    
+  }
+
+  for(uint8_t i = 0; i < 3; i++){
+    AnalogWrite
   }
 }
 
@@ -119,16 +134,14 @@ void clearLighting(Lighting *light){
 //returns the next available alert for a port, if there is one. Else, return bad Lighting
 Lighting* findNextAlert(Port* p){
   for(int j = 0; j < array_size; j++){
-      if(p->alerts[j].is_good){
-        debug("Alert found in queue");
+    if(p->alerts[j].is_good){
+      debug("Alert found in queue");
         //Serial.println(p->current_lighting);
-        return &p->alerts[j];
-      }
+      return &p->alerts[j];
     }
-    debug("No alert found in queue for port");
-    Lighting temp;
-    temp.is_good = false;
-    return &temp;
+  }
+  debug("No alert found in queue for port");
+  return &NULL_LIGHTING;
 }
 
 Lighting* getNextTransition(Port* p){
@@ -187,6 +200,16 @@ float easeInQuint(float t) { return t*t*t*t*t; }
 float easeOutQuint(float t) { return 1+(--t)*t*t*t*t; }
 float easeInOutQuint(float t) { return t<.5 ? 16*t*t*t*t*t : 1+16*(--t)*t*t*t*t; }
 
+bool areEqual(Lighting* L1, Lighting* L2){
+  return ((L2->r == L1->r) &&
+  (L2->g == L1->g) &&
+  (L2->b == L1->b) &&
+  (L2->duration == L1->duration) &&
+  (L2->transition_style == L1->transition_style) &&
+  (L2->is_alert == L1->is_alert) &&
+  (L2->is_good == L1->is_good));
+}
+
 void runtests(){
   int a = 0;
   assert(a==0);
@@ -195,30 +218,41 @@ void runtests(){
   L1.r = 0;
   L1.g = 0;
   L1.b = 0;
-  L1.duration = 0;
+  L1.duration = 50;
   L1.transition_style = 0;
   L1.is_alert = false;
   L1.is_good = true;
+
+  assert(areEqual(&L1, &L1));
 
   assert(L1.r == 0);
   Serial.println(F("Can create and assign bytes to Lighting Objects"));
   assert(L1.is_good == true);
   Serial.println(F("Seems like the Lighting L1 is good"));
 
-delay(500);
 
   Lighting L2;
   L2.r = 255;
   L2.g = 0;
   L2.b = 255;
-  L2.duration = 65535;
+  L2.duration = 1000;
   L2.transition_style = 1;
   L2.is_alert = false;
   L2.is_good = true;
   Serial.println(F("No errors while creating L2"));
+  assert(!areEqual(&L1, &L2));
 
-  delay(500);
+  Lighting L3;
+  L3.r = 3;
+  L3.g = 3;
+  L3.b = 3;
+  L3.duration = 11;
+  L3.transition_style = 3;
+  L3.is_alert = true;
+  L3.is_good = true;
+  Serial.println(F("No errors while creating L3"));
 
+  
   Lighting emptyLighting;
   Serial.println(F("Created emptyLighting"));
   emptyLighting.r = 0;
@@ -232,12 +266,10 @@ delay(500);
   assert(L2.is_good == true);
   assert(L2.r == 255);
   Serial.println(F("L2 is as expected"));
-  delay(500);
   assert(L1.r != L2.r);
   assert(L1.g == L2.g);
   Serial.println(F("Comparisons between Lightings work fine."));
-  delay(500);
-
+  
   Port P1;
   P1.pins[RED] = 3;
   P1.pins[GREEN] = 5;
@@ -254,36 +286,122 @@ delay(500);
 
   Serial.println(F("Testing addLighting"));
   assert(P1.transitions[0].is_good == 0);
-  delay(500);
   addLighting(&P1, &L1);
   assert(P1.transitions[0].is_good == 1);
-  Serial.println(F("Is now good"));
-  delay(500);
-  assert(P1.transitions[0].r == L1.r);
-  assert(P1.transitions[0].g == L1.g);
-  assert(P1.transitions[0].b == L1.b);
-  assert(P1.transitions[0].duration == L1.duration);
-  assert(P1.transitions[0].transition_style == L1.transition_style);
-  assert(P1.transitions[0].is_alert == L1.is_alert);
-  assert(P1.transitions[0].is_good == L1.is_good);
+  //Serial.println(F("Is now good"));
+
+  assert(areEqual(&P1.transitions[0], &L1));
   Serial.println(F("First lighting added ok"));
 
-  delay(500);
-
+  
   assert(P1.transitions[1].is_good == 0);
   addLighting(&P1, &L2);
   assert(P1.transitions[1].is_good == 1);
-  Serial.println(F("Is now good"));
-  assert(P1.transitions[1].r == L2.r);
-  assert(P1.transitions[1].g == L2.g);
-  assert(P1.transitions[1].b == L2.b);
-  assert(P1.transitions[1].duration == L2.duration);
-  assert(P1.transitions[1].transition_style == L2.transition_style);
-  assert(P1.transitions[1].is_alert == L2.is_alert);
-  assert(P1.transitions[1].is_good == L2.is_good);
+  //Serial.println(F("Is now good"));
+
+  assert(areEqual(&P1.transitions[1], &L2));
   Serial.println(F("Second lighting added ok"));
 
+  assert(P1.alerts[0].is_good == 0);
+  addLighting(&P1, &L3);
+  assert(P1.alerts[0].is_good == 1);
+  //Serial.println(F("Is now good"));
+
+  assert(areEqual(&P1.alerts[0], &L3));
+  Serial.println(F("Alert lighting added ok"));
   Serial.println(F("addLighting complete"));
+
+
+  
+  Serial.println(F("Testing lighting transitions"));
+
+  Port P2;
+  P2.pins[RED] = 3;
+  P2.pins[GREEN] = 5;
+  P2.pins[BLUE] = 6;
+  P2.address = 1;
+  P2.current_transition_index = 0;
+  Serial.println(F("Created empty port"));
+
+  //Testing getNextTransition on a Port with an empty queue. Should return the Default
+  Lighting* testLightptr = getNextTransition(&P2);
+  assert(areEqual(testLightptr, &DEFAULTLIGHTING));
+  testLightptr = getNextTransition(&P2);
+  assert(areEqual(testLightptr, &DEFAULTLIGHTING));
+  Serial.println(F("Getting expected defaultlighting when searching empty list"));
+
+  Serial.println(F("Attempting to iterate through P1's transition list"));  
+  testLightptr = getNextTransition(&P1);
+  assert(areEqual(testLightptr, &L1));
+  Serial.println(F("Getting expected lighting L1"));
+  testLightptr = getNextTransition(&P1);
+  assert(areEqual(testLightptr, &L2));
+  Serial.println(F("Getting expected lighting L2"));
+  // testLightptr = getNextTransition(&P1);
+  // assert(areEqual(testLightptr, &L3));
+  // Serial.println(F("Getting expected lighting L3"));
+  testLightptr = getNextTransition(&P1);
+  assert(areEqual(testLightptr, &L1));
+  Serial.println(F("Getting expected lighting L1, having successfully looped"));
+  testLightptr = getNextTransition(&P1);
+  assert(areEqual(testLightptr, &L2));
+  Serial.println(F("Getting expected lighting L2"));
+  // testLightptr = getNextTransition(&P1);
+  // assert(areEqual(testLightptr, &L3));
+  // Serial.println(F("Getting expected lighting L3"));
+  testLightptr = getNextTransition(&P1);
+  assert(areEqual(testLightptr, &L1));
+  Serial.println(F("Transition loops fine on list."));
+  Serial.println(F("Completed Transition tests"));
+
+  Serial.println(F("Testing Tick"));  
+  
+  tick(&P2);
+  assert(areEqual(&P2->current_lighting, &DEFAULTLIGHTING));
+  Serial.println(F("Tick gives expected DefaultLighting on empty port"));
+  tick(&P2);
+  assert(areEqual(&P2->current_lighting, &DEFAULTLIGHTING));
+  assert(areEqual(&P2->old_lighting, &DEFAULTLIGHTING));
+  Serial.println(F("Seems to work for empty queues"));
+
+  Serial.println(F("Testing on populated queues - P1"));
+  tick(&P1);
+  assert(areEqual(&P1->current_lighting, &L3));
+  Serial.println(F("Gotten alert as expected"));
+  tick(&P1);    // 0 on L1
+  assert(areEqual(&P1->old_lighting, &L3));
+  assert(areEqual(&P1->current_lighting, &L1));
+  Serial.println(F("Ticked to normal transitions ok"));
+  tick(&P1);    //10
+  tick(&P1);    //20
+  tick(&P1);    //30
+  tick(&P1);    //40
+  assert(areEqual(&P1->old_lighting, &L3));
+  assert(areEqual(&P1->current_lighting, &L1));
+  Serial.println(F("Transition has hung around for the expected length of time"));
+  assert(P1.clock == 40);
+  tick(&P1);    //50
+
+  Serial.println(F("Completed tick tests"));  
+
+  Serial.println(F("Testing Alerts"));
+
+  testLightptr = findNextAlert(&P2);
+  //This should have returned a pointer to the NULL_LIGHTING
+  assert(areEqual(testLightptr, &NULL_LIGHTING));
+  Serial.println(F("Received expected NULL_LIGHTING"));
+
+  testLightptr = findNextAlert(&P1);
+  //This should return a good alert
+  assert(!areEqual(testLightptr, &NULL_LIGHTING));
+  assert(areEqual(testLightptr, &P1.alerts[0]));
+  assert(areEqual(testLightptr, &L3));
+  Serial.println(F("Received expected valid alert"));
+
+
+
   delay(50000);
+
+
 
 }
