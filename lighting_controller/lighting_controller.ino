@@ -144,7 +144,7 @@ void tick(Port* port){
     }
     else{     //Else, grab the next Transition, increment index, and begin rendering
                                   Serial.println(F("No alert found, searching for transitions."));
-      getNextTransition(port);
+      port->current_lighting = getNextTransition(port);
     }
 
     port->clock = 0;
