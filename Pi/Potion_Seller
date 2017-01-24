@@ -1,0 +1,882 @@
+#!/usr/bin/python
+
+import sys, os, getpass
+from time import sleep
+import sqlite3 as sql
+
+connection = None
+c = None
+
+user_name = 'NULL'
+user_id = -1
+character_id = None
+is_admin = False
+
+def isadmin():
+	global is_admin
+	return is_admin
+
+def login():
+	global user_id
+	global character_id
+	global is_admin
+	global user_name
+	users = getallusers()
+	userids = []
+	usernames = []
+	admins = []
+	hashes = []
+	characters = []
+	for user in users:
+		userids.append(user[0])
+		usernames.append(user[1])
+		admins.append(user[2])
+		hashes.append(user[3])
+		characters.append(user[4])
+
+	user = menufromids("Who are you?", userids, usernames)
+
+	arrayid = userids.index(user)
+	
+	if hashes[arrayid]:
+		print("Please enter your password: ")
+		pw = getpass.getpass()
+		if hash(pw) == hashes[arrayid]:
+			user_id = userids[arrayid]
+			is_admin = admins[arrayid]
+			user_name = usernames[arrayid]
+		else:
+			clear()
+			print "Incorrect passcode"
+			pause()
+			login()
+	else:
+		user_id = userids[arrayid]
+		is_admin = False
+		user_name = usernames[arrayid]
+		character_id = characters[arrayid]
+	clear()	
+
+def padstring(text, targetlen):
+	text = str(text)
+	while len(text) < targetlen:
+		text += ' '
+	return text
+
+def rpadstring(text, targetlen):
+	text = str(text)
+	while len(text) < targetlen:
+		text = ' ' + text
+	return text
+
+def getallusers():
+	c.execute('SELECT user_ID, name, user_is_admin, password_hash, character_ID FROM users')
+	return c.fetchall()
+
+def getallsources():
+	return c.execute('SELECT source_ID, name FROM sources').fetchall()	
+
+def getalleffects():
+	if isadmin():
+		return c.execute('SELECT * FROM effects ORDER BY name').fetchall()
+	else:
+		return c.execute('SELECT * FROM effects WHERE effects.is_known_by_players = 1').fetchall()
+
+def getallessences():
+	return c.execute('SELECT * FROM essences').fetchall()
+
+def getallingredients():
+	if isadmin():
+		return c.execute('SELECT i.*, e.name FROM ingredients AS i LEFT JOIN essences AS e ON e.essence_id = i.essence_id').fetchall()
+	return c.execute(	 'SELECT i.*, e.name FROM ingredients AS i LEFT JOIN essences AS e ON e.essence_id = i.essence_id WHERE i.is_known_by_players = 1').fetchall()
+
+
+def pause():
+	raw_input('--------- \n Press Enter to continue')
+
+def runquery(query):
+	return c.execute(query).fetchall()
+	
+
+def clear():
+	os.system('clear')
+	#os.system('cls')
+
+def menufromids(prompt, ids, options):
+	clear()
+	print prompt
+	for i in range(len(ids)):
+		opt = str(rpadstring(ids[i],3)) + ': ' + str(options[i])
+		print opt
+	print '\n---------\n'
+	try:
+		choice =  input('  ?: ')
+		assert type(choice) is int
+		choice = int(choice)
+		assert int(choice) in ids
+	except:
+#		pause()
+#		print "Your choice was " + str(choice)
+#		print 'type(choice) is ' + str(type(choice))
+#		print "Choice in Ids: " + str(int(choice) in ids)
+#		pause()
+		print "Please enter a valid choice\n"
+		pause()
+		choice = menu(prompt, options) + 1
+
+	return choice
+
+def menu(prompt, options):
+	ids = range(1, len(options)+1)
+	return menufromids(prompt, ids, options) - 1
+
+def viewallmenu():
+	global is_admin
+
+	prompt = 'Which table would you like to view?'
+	options = [	'recipes',
+			'ingredients',
+			'effects',
+			'ingredient_requirements',
+			'essence_requirements',
+			'essences',
+			'users',
+			'Exit']
+	choice = menu(prompt, options)
+	if options[choice] == "Exit":
+		return
+	
+	query = 'select * from ' + options[choice]
+	if not is_admin:
+		query += ' WHERE is_known_by_players = 1'
+
+	query_output = runquery(query)
+
+	clear()
+	print 'Table: ' + options[choice]
+
+	if(query_output):
+		line = ''
+		for key in query_output[0].keys():
+			line += padstring(key, 25)
+		print line
+
+		for item in query_output:
+			line = ''
+			for val in item:
+				line += padstring(val, 25)
+			print line
+	else:
+		print "No results found"
+
+	pause()
+
+#def playerviewrecipes():
+#	clear()
+#	query = ('SELECT r.name, c.name, r.total_toxicity, r.is_effective, e.duration, r.is_poison, e.good_desc, e.bad_desc'
+#		' FROM recipes as r'
+##		' LEFT JOIN users AS a ON r.author_ID = a.user_ID'
+#		' LEFT JOIN effects AS e ON r.effect_ID = e.effect_ID'
+#		' LEFT JOIN sources AS c ON r.source_ID = c.source_ID'
+#		' WHERE r.is_known_by_players = 1'
+#		)
+#	data = c.execute(query).fetchall()
+#	
+#	is_effective = 3
+#	duration = 4
+#	is_poison = 5
+#	width = 35
+#	
+#	if data:
+#		keys = ['recipe name', 'author', 'toxicity', 'is effective', 'duration']#data[0].keys()
+#		header = ''
+#		for key in keys:	#Fetches all relevant fields first
+#			header += padstring(key, width)
+#		header += padstring('description', width)
+#		header += '\n----------'
+#		
+#		print header
+#
+#		for line in data:
+#			recipe = ''
+#			for i in range(0,4):
+#				recipe += padstring(line[i], width)
+#			if line[is_effective]:
+#				recipe += padstring(line[duration], width)
+#				if line[is_poison]:
+#					recipe += padstring(line[7], width)
+#				else:
+#					recipe += padstring(line[6], width)
+#		
+#			print recipe + '\n'
+#	else:
+#		print "No recipes found"
+#	pause()
+
+def printtable(keys, data, width):
+	clear()	
+
+	if data:
+
+		header = ''
+		for key in keys:
+			header += padstring(key, width)
+		print header
+		header += '\n----------'
+
+		for part in data:
+			line = ''
+			for field in part:
+				line += padstring(field, width)
+			print line
+	else:
+		print "No data found"
+
+	pause()
+
+
+def playerviewingredients():
+	query = ('SELECT i.name, i.toxicity, e.name, i.special_attributes'
+		' FROM ingredients AS i'
+		' LEFT JOIN essences AS e ON e.essence_ID = i.essence_ID'
+		' WHERE i.is_known_by_players = 1'
+		)
+	
+	data = c.execute(query).fetchall()
+	
+	keys = ['Name','Toxicity','Essence','Special Attributes']
+	width = 45
+	printtable(keys, data, width) 
+
+
+def playervieweffects():
+	clear()
+	query = ('SELECT name, good_desc, duration '
+		' FROM effects'
+		' WHERE is_known_by_players = 1'
+		)
+
+	data = c.execute(query).fetchall()
+
+	keys = ['Effect name','Description','Duration']
+	width = 40
+
+	printtable(keys, data, width)	
+	
+def viewusertables():
+	prompt = 'Which table would you like to view?'
+	options = [	#'recipes',
+			'ingredients',
+			'effects',
+			'Exit']
+	choice= menu(prompt, options)
+
+	query = ''
+
+	if options[choice] == 'Exit':
+		return
+#	elif options[choice] == 'recipes':
+#		playerviewrecipes()
+	elif options[choice] == 'ingredients':
+		playerviewingredients()
+	elif options[choice] == 'effects':
+		playervieweffects()
+
+def simpleaddmenu(type):
+	clear()
+
+	print 'Unimplemented menu'
+	pause()
+
+	return	
+
+	data = c.execute('SELECT * FROM ' + str(type)).fetchall()
+	fields = data[0].keys()[1:]
+	responses = []
+	for field in fields:
+		responses.append(raw_input("Enter value for " + str(field) + ":\n"))
+		
+	print fields
+	print responses
+	query = "INSERT INTO " + type + "("+ ', '.join(keys) + ") VALUES(" + ', '.join(responses) + ")"
+	#print query
+	pause()
+
+def addeffect():
+	clear()
+	effect_list = getalleffects()
+	already_exists = (padstring("inf", 5) + "Effect")	#Printable list of influences & effects
+	influences = []						#Keep track of used influences for client-side checks
+	for effect in effect_list:
+		already_exists += ('\n' + padstring(effect[2], 5) + str(effect[1]))
+		influences.append(effect[2])
+	already_exists += '\n------------\n'
+	
+#	for line in already_exists:
+#		print line
+
+	fields = ['name', 'influence', 'good_desc', 'bad_desc', 'type_id', 'duration', 'is_known_by_players']
+	print fields
+	options = list(fields) #create a new list. Otherwise changing options changes fields
+	options.append('add essence requirements')
+	print options
+	options.append('add ingredient requirements')
+	options.append('Proceed')
+
+
+	values = {}
+	for field in fields:
+		values[field] = None
+	essence_requirements = []
+	ingredient_requirements = []
+
+	while True:
+		prompt = already_exists
+		for value in values:
+			prompt += '\n' + padstring(str(value) + ':', 23) + repr(values[value])
+		prompt += '\n Choose a value to input'
+
+		choice = menu(prompt, options)
+		if   options[choice] == 'name':
+			values['name'] 		= raw_input('Enter a name for the effect: ')
+		elif options[choice] == 'influence':
+			inf			= int(raw_input('Enter a unique influence for the effect (int): '))
+			if (inf in influences):
+				print 'Influence value already exists in db'
+				pause()
+			else:
+				values['influence'] = int(inf)
+		elif options[choice] == 'good_desc':
+			values['good_desc'] 	= raw_input('Enter a description of the benefit of this effect: ')
+		elif options[choice] == 'bad_desc':
+			values['bad_desc']  	= raw_input('Enter a description of the downside of this effect: ')
+		elif options[choice] == 'type_id':
+			values['type_id']   	= int(raw_input('Is this a healing (1) or a buffing (3) effect?: '))
+		elif options[choice] == 'duration':
+			values['duration']	= raw_input('How long does the effect last?: ')
+		elif options[choice] == 'is_known_by_players':
+			values['is_known_by_players'] = int(raw_input('Do the players know of it?: '))
+
+		elif options[choice] == 'add essence requirements':
+			ess = getallessences()
+			for e in ess:
+				print(padstring(e[0], 2), e[1])
+			while True:
+				essence = raw_input('Select an essence ID: ')
+				if essence == '':
+					break
+				qty = raw_input('How many required?: ')
+				essence_requirements.append((int(essence), int(qty)))
+
+		elif options[choice] == 'add ingredient requirements':
+			ing = getallingredients()
+			for i in ing:
+				print(padstring(i[0], 2), i[1])
+			while True:
+				ingredient = raw_input('Select an ingredient ID: ')
+				if ingredient == '':
+					break
+				ingredient_requirements.append(ingredient)
+		
+		elif options[choice] == 'Proceed':
+			good_to_go = True
+			for value in values:
+				print "Checking " + repr(value) + ", is " + str(values[value])
+				if values[value] == None:
+					good_to_go = False
+					print 'please enter a value for ' + str(value)
+					pause
+			if good_to_go:
+				break
+	#Add effect to DB
+	#insert effect
+	query = "INSERT INTO effects(name, influence, good_desc, bad_desc, type_ID, duration, is_known_by_players) VALUES(?, ?, ?, ?, ?, ?, ?)"
+	c.execute(query, (values['name'], values['influence'], values['good_desc'], values['bad_desc'], values['type_id'], values['duration'], values['is_known_by_players']))
+	effect_ID = c.lastrowid
+	#insert essence requirements
+	for tup in essence_requirements:
+		query = "INSERT INTO essence_requirements(eff_influence, ess_ID, ess_count, is_known_by_players) VALUES(?, ?, ?, ?)"
+		c.execute(query, (values['influence'], tup[0], tup[1], 0))
+	#insert ingredient requirements
+	for req in ingredient_requirements:
+		query = "INSERT INTO ingredient_requirements(eff_influence, ing_ID, is_known_by_players) VALUES(?, ?, ?)"
+		c.execute(query, (values['influence'], req, 0))
+
+	#commit changes
+	connection.commit()
+	pause()
+
+def addmenu():
+	clear()
+	prompt = 'Add to which table?'
+	options = [	'sources',
+			'types',
+			'users',
+			'effects',
+			'recipes',
+			'essences',
+			'ingredients',
+			'essence requirements',
+			'ingredient requirements'
+		   ]
+			
+	choice = menu(prompt, options)
+	
+	if options[choice] == 'sources':
+		simpleaddmenu('sources')
+	if options[choice] == 'types':
+		simpleaddmenu('types')
+	if options[choice] == 'users':
+		simpleaddmenu('users')
+	if options[choice] == 'effects':
+		#print 'unimplemented choice'
+		addeffect()
+#		simpleaddmenu(sources)
+	if options[choice] == 'recipes':
+		print 'unimplemented choice'
+	if options[choice] == 'essences':
+		print 'unimplemented choice'
+	if options[choice] == 'ingredients':
+		print 'unimplemented choice'
+	if options[choice] == 'essence requirements':
+		print 'unimplemented choice'
+	if options[choice] == 'ingredient requirements':
+		print 'unimplemented choice'
+		
+	pause()
+
+def removemenu():
+	print 'unimplemented menu'
+
+	pause()
+
+def brew(ingredients):
+	clear()
+	
+	effect = 0
+	total_toxicity = 0	
+	special_attributes = []
+	essences = {}
+	for i in range(1,10):
+		essences[i] = 0
+
+	for i in ingredients:
+		qty = int(ingredients[i])
+		print "Adding " + str(qty) + " " + str(i) + " to the brew..."
+		sleep(1)
+		
+		query = ('SELECT i.essence_id, i.points, i.toxicity, i.special_attributes'
+			' FROM ingredients AS i'
+			' WHERE i.name = \"' + str(i) + '\"'
+			)
+		
+		result = c.execute(query).fetchone()
+		
+		total_toxicity += result[2] * qty
+		effect += qty * result[1]
+		special_attributes.append(result[3])
+
+		if(result[0]):
+			essences[result[0]] = essences[result[0]] + 1
+
+	for attribute in special_attributes:
+#		print attribute
+		duration_mod = 1
+#		influence_mod = 1
+		strength_mod = 1
+		poison_mod = 0
+		if attribute == 'half toxicity':
+			total_toxicity /= 2
+		if attribute == 'double duration':
+			duration_mod *= 2
+		if attribute == 'double strength':
+			strength_mod *= 2
+		if attribute == 'half influence':
+			effect /= 2
+			
+
+	
+#	print "Toxicity: " + str(total_toxicity)
+	if isadmin():
+		print 'effect: ' + str(effect)
+	query = ('SELECT e.effect_id, e.name, e.good_desc, e.bad_desc, e.type_ID, e.duration, e.is_known_by_players,'
+		#' er.ess_ID, er.eff_influence, ess_count,'
+		' ir.eff_influence, ir.ing_ID'
+		' FROM effects as e'
+		#' LEFT JOIN essence_requirements AS er ON er.eff_influence = ' + str(effect) +
+		' LEFT JOIN ingredient_requirements AS ir ON ir.eff_influence = ' + str(effect) +
+		' WHERE influence = ' + str(effect)
+		)
+	result = c.execute(query).fetchone()
+
+	#Determine if essence requirements are met
+	query = ('SELECT ess_id, ess_count FROM essence_requirements WHERE eff_influence = ' + str(effect))
+	essence_requirements = c.execute(query).fetchall()
+	
+	is_effective = 1
+
+#	print "Essence requirements:"
+	for req in essence_requirements:
+#		print str(req[0]) + '\t' + str(req[1])
+		if(essences[req[0]] < req[1]):
+			if isadmin():
+				print "Failed essence requirement: " + str(req[0]) + str(req[1])
+			is_effective = 0
+#			print 'recipe lacks enough essence ' + str(req[0]) + ": Needs " + str(req[1])
+#			effect = None
+
+	print '\n\n...\n\n'
+	sleep(2)
+
+	if result and is_effective:	
+		info = ''
+		if effect == int(effect):
+			potion_effect = result[2]
+			potion_duration = result[5]
+			info = "You've brewed a potion of " + result[1]
+			info += ". It will " + str(potion_effect)
+			if potion_duration:
+				info += " and lasts for " + str(duration_mod) + "x(" +  str(potion_duration)+ ")"
+		else:
+			potion_effect = result[3]
+			potion_duration = result[5]
+			info = "You've brewed a poison of " + result[1]
+			info += ". It will " + potion_effect			
+			if potion_duration:
+				info += " and lasts for " + str(duration_mod) + "x(" +  str(potion_duration)+ ")"
+		print info
+		if (not is_admin):
+			print "You discovered a new effect!"
+			c.execute("UPDATE effects SET is_known_by_players=1 WHERE influence = " + str(effect))
+			connection.commit()
+
+	else:
+		print "This potion didn't turn out."
+	print "This potion's toxicity is " + str(total_toxicity)
+
+	pause()
+
+#	print "Recipe is effective?: " + str(is_effective)
+#	print "Influence sum is: " + str(effect)
+#	print "recipe is not poison?: " + str(int(effect) == effect)
+#	pause()
+
+	prompt = "Save this recipe?"
+	options = ["Yes", "No"]
+
+	choice = menu(prompt, options)
+	if options[choice] == "Yes":
+		print 'saving...'
+		# INSERT INTO RECIPES
+		global user_ID
+		if effect != int(effect):
+			is_poison = 1
+		else:
+			is_poison = 0
+
+#		effect_exists = c.execute("SELECT e.effect_ID FROM effects AS e WHERE e.influence = " + str(effect)).fetchone()
+#		if effect_exists:
+#			effect_id = effect_exists[0]
+#		else:
+#			effect_id = None
+
+		potion_name = raw_input('Enter a name for the concotion:\n\t')
+		query = ('INSERT INTO recipes(name, author_ID, total_toxicity, is_poison, is_effective, effect_influence, source_ID, is_known_by_players) '
+			' VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+			)
+
+		global is_admin
+		global character_id
+
+		if not is_admin:
+			source = str(character_id)
+			known = 1
+		else:
+			for user in getallsources():
+				print str(user[0]) + '\t' + str(user[1])
+			
+			source = raw_input("Input source id: ")
+			known = raw_input("Is known by players?: ")
+
+		values = (potion_name, user_id, total_toxicity, is_poison, is_effective, effect, source, known)
+
+#		print repr(query)
+#		print values
+		
+		c.execute(query, values)
+		# Insert into ITR table
+		new_recipe_id = c.lastrowid
+
+		for i in ingredients:
+
+			qty = int(ingredients[i])
+			query = ('SELECT i.ingredient_ID FROM ingredients AS i WHERE i.name = \"' 
+				+ str(i) + '\"'
+			)
+			ing_id = c.execute(query).fetchone()
+			
+
+			#print "Ingredient ID is: "
+
+			query = ('INSERT INTO ingredients_to_recipes(ing_ID, rec_ID, ingredient_quantity) VALUES(?, ?, ?)')
+
+			values = (ing_id[0], new_recipe_id, qty)
+			#print query
+			#print values
+			c.execute(query, values)
+	
+		connection.commit()
+		print "Recipe successfully added to the database"
+	elif options[choice] == "No":
+		clear()
+	pause()
+	
+def brewmenu():
+	print 'in progress'
+	clear()
+
+	
+	ingredients_list = getallingredients()
+	for ing in ingredients_list:
+		print ing
+	ingredient_displays = []
+	ingredient_ids = []
+	ingredient_names = []
+	for ing in ingredients_list:
+		ingredient_ids.append(padstring(ing[0],4))
+		ingredient_names.append(ing[1])
+		display = padstring(ing[1], 30) + padstring(ing[7], 11)  +  padstring(ing[3], 3)
+		ingredient_displays.append(display)
+	
+	prompt = padstring('', 7) + padstring("\nIngredient", 33) + padstring("Essence", 11) + padstring("Tox", 3)
+	
+
+	ingredient_displays.append("Brew")
+	ingredient_displays.append("Exit")
+	added_ingredients = {}
+
+	while True:
+		already_added = 'Current ingredients:\n' + padstring(' Ingredient ', 30) + 'Quantity\n'
+		for ing in added_ingredients:
+			already_added += padstring(ing,30) + str(added_ingredients[ing]) + '\n'
+		
+		choice = menu(already_added + prompt, ingredient_displays)
+		if ingredient_displays[choice] == "Exit":
+			break
+		elif ingredient_displays[choice] == "Brew":
+			brew(added_ingredients)
+			added_ingredients = {}
+		else:
+			qty = raw_input("Add how much " + str(ingredient_names[choice]) + "?\n\t")
+			if(not qty == '') and (int(qty) > 0):
+				added_ingredients[ingredient_names[choice]] = qty
+
+
+
+def formatrecipe(id, author, effect, toxicity, is_poison, g_descr, b_descr, duration, ingredients, rec_name):
+	header = ''
+	header += str(rec_name) + '\n'
+	header += "Recipe ID: " + padstring(id, 3)
+	header += "Author: " + padstring(author, 10)
+	if(effect):
+		header += "Effect: " + padstring(effect, 30)
+	else:
+		header += "Effect: " + padstring("No effect", 30)
+
+	header += "Toxicity: " + padstring(toxicity, 3)
+	header += "Duration: " + padstring(duration, 15)
+	if(effect):
+		header += "\nDescription: " + (padstring(b_descr, 40) if is_poison else padstring(g_descr, 40))
+
+	#################################################
+	
+	inglist = ''
+	for ing in ingredients:
+		inglist += '\t\t'
+		inglist += padstring(ing[2], 2)
+		if(ing[2] > 1):
+			inglist += ' portions of  '
+		else:
+			inglist += ' portion of   '
+		inglist += padstring(ing[1], 30)
+		inglist += '\n'
+		
+	
+	print header
+	print inglist
+	
+
+def printrecipes(data):
+	recipes = {}
+	for item in data:
+		if item[0] not in recipes:
+			recipes[item[0]] = []
+
+	for item in data:
+		if item[1] not in recipes[item[0]]:
+			recipes[item[0]].append(item)
+
+	row_titles = data[0].keys()
+#	print row_titles
+
+	for item in recipes:
+		row = recipes[item][0]
+
+		id = item
+		effect = row[7]
+		toxicity = row[5]
+		is_poison = row[4]
+		g_descr = row[8]
+		b_descr = row[9]
+		author = row[11]
+		duration = row[10]
+		rec_name = row[13]
+
+		ingredients = []
+		for ing in recipes[item]:
+			ingredients.append(ing)
+
+		formatrecipe(id, author, effect, toxicity, is_poison, g_descr, b_descr, duration, ingredients, rec_name)
+		print '\n-----'
+
+
+
+def viewfilteredrecipes(filter):
+	clear()
+
+	if isadmin():
+		query = ( 	'SELECT r.recipe_id, i.name,'
+				' itr.ingredient_quantity,'
+				' u.name, r.is_poison, r.total_toxicity, r.is_known_by_players,'
+				' e.name, e.good_desc, e.bad_desc, e.duration,'
+				' s.name, s.source_ID, r.name'
+				' FROM ingredients_to_recipes AS itr'
+				' JOIN ingredients AS i on i.ingredient_ID = itr.ing_ID'
+				' JOIN recipes AS r on r.recipe_ID = itr.rec_ID'
+				' LEFT JOIN effects AS e on e.influence = r.effect_influence'
+				' LEFT JOIN users AS u on u.user_ID = r.author_ID'
+				' LEFT JOIN sources AS s ON s.source_ID = r.source_ID'
+				' WHERE r.recipe_ID IS NOT NULL'
+				+ filter
+				)
+	else:
+		query = (	 'SELECT r.recipe_id, i.name,'
+				' itr.ingredient_quantity,'
+				' u.name, r.is_poison, r.total_toxicity, r.is_known_by_players,'
+				' e.name, e.good_desc, e.bad_desc, e.duration,'
+				' s.name, s.source_ID, r.name'
+				' FROM ingredients_to_recipes AS itr'
+				' JOIN ingredients AS i ON i.ingredient_ID = itr.ing_ID'
+				' JOIN recipes AS r ON r.recipe_ID = itr.rec_ID AND r.is_known_by_players = 1' #Only difference is this is_known_by_players
+				' LEFT JOIN effects AS e ON e.influence = r.effect_influence'
+				' LEFT JOIN users AS u ON u.user_ID = r.author_ID'
+				' LEFT JOIN sources AS s ON s.source_ID = r.source_ID'
+				' WHERE r.recipe_ID IS NOT NULL'
+				+ filter
+				)
+		
+	results = runquery(query)
+
+	if results:
+		printrecipes(results)
+	else:
+		print "No matching recipes found"
+		
+	pause()
+
+def viewrecipes():
+	filter = ''
+	while True:
+		clear()
+		
+		prompt = 'Current filters: ' + filter + '\nSelect filter criteria'
+		options = [	'source',
+				'effect',
+#				'is poison',
+				'clear filters',
+				'done']
+
+		choice = menu(prompt, options)
+		if options[choice] == "source":
+			ids = []
+			sources = []
+			for source in getallsources():
+				ids.append(source[0])
+				sources.append(source[1])
+			s_choice = menufromids("Select an author:", ids, sources)
+			filter += ' AND s.source_ID = ' + str(s_choice)
+		if options[choice] == "effect":
+			ids = []
+			effects = []
+			for effect in getalleffects():
+				ids.append(effect[0])
+				effects.append(effect[1])
+			e_choice = menufromids("Select an effect:", ids, effects)
+			filter += ' AND e.effect_id=' + str(e_choice)
+			if ( not isadmin()):
+				filter += ' AND e.is_known_by_players=1'
+		if options[choice] == 'clear filters':
+			filter = ''
+#		if options[choice] == "is poison":
+#			print "poison"
+		if options[choice] == "done":
+			break
+	viewfilteredrecipes(filter)
+
+
+def mainmenu():
+	while(True):
+		global user_id
+		global is_admin
+		prompt = 'Logged in as ' + user_name
+		prompt += "\nPotion seller, I am going into battle. I require your strongest potions."
+		admin_options = [	'Add',
+					'Admin View Tables',
+					'Remove']
+	
+		options = [	'View Recipes',
+				'Brew',
+				'View Tables',
+				'Exit']
+
+		if(is_admin):
+			options = admin_options + options
+
+		choice = menu(prompt, options)
+		if   options[choice] == 'Admin View Tables':
+			viewallmenu()
+		elif options[choice] == 'View Tables':
+			viewusertables()
+		elif options[choice] == 'View Recipes':
+			viewrecipes()
+#		elif options[choice] == 'View Recipes':
+#			playerviewrecipes()
+		elif options[choice] == 'Add':
+			addmenu()
+		elif options[choice] == 'Remove':
+			removemenu()
+		elif options[choice] == 'Brew':
+			brewmenu()
+		elif options[choice] == 'Exit':
+			return
+		else:
+			print 'Illegal choice ' + str(choice)
+			print 'Please enter a valid choice'
+			pause()
+
+try:
+	connection = sql.connect('/home/pi/Documents/DnD/potions.db')
+	connection.row_factory = sql.Row
+
+	c = connection.cursor()
+
+	login()
+
+	mainmenu()
+
+	clear()
+	connection.close()
+
+except sql.Error as e:
+	print e
+	sys.exit(1)
