@@ -481,6 +481,7 @@ void runtests(){
   assert(areEqual(testLightptr, &NULL_LIGHTING));
   Serial.println(F("Received expected NULL_LIGHTING"));
 
+  addLighting(&P1, &L3);
   testLightptr = findNextAlert(&P1);
   //This should return a good alert
   assert(!areEqual(testLightptr, &NULL_LIGHTING));
