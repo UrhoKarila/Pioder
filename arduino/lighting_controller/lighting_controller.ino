@@ -27,20 +27,20 @@ float easeInQuint(float t) { return t*t*t*t*t;}                                 
 float easeOutQuint(float t) { return 1+(--t)*t*t*t*t;}                                              //case 12
 float easeInOutQuint(float t) { return t<.5 ? 16*t*t*t*t*t : 1+16*(--t)*t*t*t*t;}                   //case 13
 
-float (*easingFunctions[14])(float t) = {easeNone,
-                          easeLinear,
-                          easeInQuad,
-                          easeOutQuad,
-                          easeInOutQuad,
-                          easeInCubic,
-                          easeOutCubic,
-                          easeInOutCubic,
-                          easeInQuart,
-                          easeOutQuart,
-                          easeInOutQuart,
-                          easeInQuint,
-                          easeOutQuint,
-                          easeInOutQuint};
+//float (*easingFunctions[14])(float t) = {easeNone,
+//                          easeLinear,
+//                          easeInQuad,
+//                          easeOutQuad,
+//                          easeInOutQuad,
+//                          easeInCubic,
+//                          easeOutCubic,
+//                          easeInOutCubic,
+//                          easeInQuart,
+//                          easeOutQuart,
+//                          easeInOutQuart,
+//                          easeInQuint,
+//                          easeOutQuint,
+//                          easeInOutQuint};
 
 typedef struct {
   uint8_t r;
@@ -73,7 +73,7 @@ void setup() {
   Serial.begin(9600); 
   while(!Serial) {
     ; // wait for serial port to connect. Needed for native USB
-  }
+    }
   // Serial.print(F("freeMemory()="));
   // Serial.println(freeMemory());
   delay(5000);
@@ -118,9 +118,6 @@ void setup() {
   }
   runtests();
 
-
-  
-
   Port right;
   right.pins[RED] = 9;
   right.pins[GREEN] = 11;
@@ -133,7 +130,6 @@ void setup() {
   for(int i = 0; i < 3; i++){
     pinMode(right.pins[i], OUTPUT);
   }
-
 
   ports[0] = left;
   ports[1] = right;
@@ -188,8 +184,71 @@ void tick(Port* port){
 }
 
 uint8_t getEasing(Lighting* old, Lighting* new){
-  int old_val = (int)255*(1 - *easingFunctions[old->transition_style](clock/old->duration));
-  int new_val = (int)255*(    *easingFunctions[new->transition_style](clock/new->duration));
+  int old_val = 0;
+  int new_val = 0;
+  switch(new->transition_style){
+//  case 0:  
+//    old_val = (int)255*(1 - easeNone(clock/old->duration));
+//    new_val = (int)255*(    easeNone(clock/new->duration));
+//    break;
+//  case 1:
+//    old_val = (int)255*(1 - easeLinear(clock/old->duration));
+//    new_val = (int)255*(    easeLinear(clock/new->duration));
+//    break;
+//  case 2:
+//    old_val = (int)255*(1 - easeInQuad(clock/old->duration));
+//    new_val = (int)255*(    easeInQuad(clock/new->duration));
+//    break;
+//  case 3:
+//    old_val = (int)255*(1 - easeOutQuad(clock/old->duration));
+//    new_val = (int)255*(    easeOutQuad(clock/new->duration));
+//    break;
+//  case 4:
+//    old_val = (int)255*(1 - easeInOutQuad(clock/old->duration));
+//    new_val = (int)255*(    easeInOutQuad(clock/new->duration));
+//    break;
+//  case 5:
+//    old_val = (int)255*(1 - easeInCubic(clock/old->duration));
+//    new_val = (int)255*(    easeInCubic(clock/new->duration));
+//    break;
+//  case 6:
+//    old_val = (int)255*(1 - easeOutCubic(clock/old->duration));
+//    new_val = (int)255*(    easeOutCubic(clock/new->duration));
+//    break;
+//  case 7:
+//    old_val = (int)255*(1 - easeInOutCubic(clock/old->duration));
+//    new_val = (int)255*(    easeInOutCubic(clock/new->duration));
+//    break;
+//  case 8:
+//    old_val = (int)255*(1 - easeInQuart(clock/old->duration));
+//    new_val = (int)255*(    easeInQuart(clock/new->duration));
+//    break;
+//  case 9:
+//    old_val = (int)255*(1 - easeOutQuart(clock/old->duration));
+//    new_val = (int)255*(    easeOutQuart(clock/new->duration));
+//    break;
+//  case 10:
+//    old_val = (int)255*(1 - easeInOutQuart(clock/old->duration));
+//    new_val = (int)255*(    easeInOutQuart(clock/new->duration));
+//    break;
+//  case 11:
+//    old_val = (int)255*(1 - easeInQuint(clock/old->duration));
+//    new_val = (int)255*(    easeInQuint(clock/new->duration));
+//    break;
+//  case 12:
+//    old_val = (int)255*(1 - easeOutQuint(clock/old->duration));
+//    new_val = (int)255*(    easeOutQuint(clock/new->duration));
+//    break;
+//  case 13:
+//    old_val = (int)255*(1 - easeInOutQuint(clock/old->duration));
+//    new_val = (int)255*(    easeInOutQuint(clock/new->duration));
+//    break;
+  default:
+//    old_val = (int)255*(1 - easeNone(clock/old->duration));
+//    new_val = (int)255*(    easeNone(clock/new->duration));
+    break;
+  }
+
   return old_val + new_val;
 }
 
