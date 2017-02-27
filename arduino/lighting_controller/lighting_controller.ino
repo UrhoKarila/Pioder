@@ -12,20 +12,6 @@ const int tick_rate = 10;    //How often to update lights, in ms
 const int array_size = 16;
 const bool debug_mode_enabled = true;
 
-float easeNone(float t) { return t<.5? (float)0 : (float)1;}                                        //case 0
-float easeLinear(float t) { return float(t);}                                                       //case 1
-float easeInQuad(float t) { return float(t*t);}                                                     //case 2
-float easeOutQuad(float t) { return float(t)*(2-t);}                                                //case 3
-float easeInOutQuad(float t) { return t<.5 ? float(2*t*(t)) : float(-1+float(4-2*t)*float(t));}     //case 4
-float easeInCubic(float t) { return (float)t*t*t;}                                                  //case 5
-float easeOutCubic(float t) { return (float)(--t)*t*t+1;}                                           //case 6
-float easeInOutCubic(float t) { return t<.5 ? (float)4*t*t*t : (float)(t-1)*(2*t-2)*(2*t-2)+1;}     //case 7
-float easeInQuart(float t) { return (float)t*t*t*t;}                                                //case 8
-float easeOutQuart(float t) { return (float)1-(--t)*t*t*t;}                                         //case 9
-float easeInOutQuart(float t) { return t<.5 ? (float)8*t*t*t*t : (float)1-8*(--t)*t*t*t;}           //case 10
-float easeInQuint(float t) { return t*t*t*t*t;}                                                     //case 11
-float easeOutQuint(float t) { return 1+(--t)*t*t*t*t;}                                              //case 12
-float easeInOutQuint(float t) { return t<.5 ? 16*t*t*t*t*t : 1+16*(--t)*t*t*t*t;}                   //case 13
 
 //float (*easingFunctions[14])(float t) = {easeNone,
 //                          easeLinear,
@@ -69,6 +55,8 @@ Port ports[port_qty];       //create array of ports
 Lighting DEFAULTLIGHTING;
 Lighting NULL_LIGHTING;
 
+uint8_t lighting_modifier[3];
+
 void setup() {
   Serial.begin(9600); 
   while(!Serial) {
@@ -76,7 +64,9 @@ void setup() {
     }
   // Serial.print(F("freeMemory()="));
   // Serial.println(freeMemory());
-  delay(5000);
+  // delay(5000);
+
+  lighting_modifier = {255,255,255};
 
   Serial.println(F("Setup in progress"));
 
@@ -176,77 +166,81 @@ void tick(Port* port){
     port->clock = 0;
   }
 
-  for(uint8_t i = 0; i < 3; i++){
     //analogWrite
-    port->colors[i] = getEasing(&port->old_lighting, port->current_lighting, clock);
-    analogWrite(port->pins[i], port->colors[i]);
-  }
+
+  port->colors[RED] = (color_modifier[RED] * getEasing(port->old_lighting.r, port->current_lighting->r, port->clock, port->current_lighting->duration, port->current_lighting->transition_style)) / 255;
+  analogWrite(port->pins[RED], port->colors[RED]);
+  port->colors[GREEN] = (color_modifier[GREEN] * getEasing(port->old_lighting.g, port->current_lighting->g, port->clock, port->current_lighting->duration, port->current_lighting->transition_style)) / 255;
+  analogWrite(port->pins[GREEN], port->colors[GREEN]);
+  port->colors[BLUE] = (color_modifier[BLUE] * getEasing(port->old_lighting.b, port->current_lighting->b, port->clock, port->current_lighting->duration, port->current_lighting->transition_style)) / 255;
+  analogWrite(port->pins[BLUE], port->colors[BLUE]);
+  
 }
 
-uint8_t getEasing(Lighting* old, Lighting* new){
+uint8_t getEasing(uint8_t oldlight, uint8_t newlight, uint16_t clock, uint16_t duration, uint8_t transition_style){
   int old_val = 0;
   int new_val = 0;
-  switch(new->transition_style){
-//  case 0:  
-//    old_val = (int)255*(1 - easeNone(clock/old->duration));
-//    new_val = (int)255*(    easeNone(clock/new->duration));
-//    break;
-//  case 1:
-//    old_val = (int)255*(1 - easeLinear(clock/old->duration));
-//    new_val = (int)255*(    easeLinear(clock/new->duration));
-//    break;
-//  case 2:
-//    old_val = (int)255*(1 - easeInQuad(clock/old->duration));
-//    new_val = (int)255*(    easeInQuad(clock/new->duration));
-//    break;
-//  case 3:
-//    old_val = (int)255*(1 - easeOutQuad(clock/old->duration));
-//    new_val = (int)255*(    easeOutQuad(clock/new->duration));
-//    break;
-//  case 4:
-//    old_val = (int)255*(1 - easeInOutQuad(clock/old->duration));
-//    new_val = (int)255*(    easeInOutQuad(clock/new->duration));
-//    break;
-//  case 5:
-//    old_val = (int)255*(1 - easeInCubic(clock/old->duration));
-//    new_val = (int)255*(    easeInCubic(clock/new->duration));
-//    break;
-//  case 6:
-//    old_val = (int)255*(1 - easeOutCubic(clock/old->duration));
-//    new_val = (int)255*(    easeOutCubic(clock/new->duration));
-//    break;
-//  case 7:
-//    old_val = (int)255*(1 - easeInOutCubic(clock/old->duration));
-//    new_val = (int)255*(    easeInOutCubic(clock/new->duration));
-//    break;
-//  case 8:
-//    old_val = (int)255*(1 - easeInQuart(clock/old->duration));
-//    new_val = (int)255*(    easeInQuart(clock/new->duration));
-//    break;
-//  case 9:
-//    old_val = (int)255*(1 - easeOutQuart(clock/old->duration));
-//    new_val = (int)255*(    easeOutQuart(clock/new->duration));
-//    break;
-//  case 10:
-//    old_val = (int)255*(1 - easeInOutQuart(clock/old->duration));
-//    new_val = (int)255*(    easeInOutQuart(clock/new->duration));
-//    break;
-//  case 11:
-//    old_val = (int)255*(1 - easeInQuint(clock/old->duration));
-//    new_val = (int)255*(    easeInQuint(clock/new->duration));
-//    break;
-//  case 12:
-//    old_val = (int)255*(1 - easeOutQuint(clock/old->duration));
-//    new_val = (int)255*(    easeOutQuint(clock/new->duration));
-//    break;
-//  case 13:
-//    old_val = (int)255*(1 - easeInOutQuint(clock/old->duration));
-//    new_val = (int)255*(    easeInOutQuint(clock/new->duration));
-//    break;
-  default:
-//    old_val = (int)255*(1 - easeNone(clock/old->duration));
-//    new_val = (int)255*(    easeNone(clock/new->duration));
-    break;
+  switch(transition_style){
+    case 0:  
+      old_val = (int)oldlight*(1 - easeNone(clock/duration));
+      new_val = (int)newlight*(    easeNone(clock/duration));
+      break;
+    case 1:
+      old_val = (int)oldlight*(1 - easeLinear(clock/duration));
+      new_val = (int)newlight*(    easeLinear(clock/duration));
+      break;
+    case 2:
+      old_val = (int)oldlight*(1 - easeInQuad(clock/duration));
+      new_val = (int)newlight*(    easeInQuad(clock/duration));
+      break;
+    case 3:
+      old_val = (int)oldlight*(1 - easeOutQuad(clock/duration));
+      new_val = (int)newlight*(    easeOutQuad(clock/duration));
+      break;
+    case 4:
+      old_val = (int)oldlight*(1 - easeInOutQuad(clock/duration));
+      new_val = (int)newlight*(    easeInOutQuad(clock/duration));
+      break;
+    case 5:
+      old_val = (int)oldlight*(1 - easeInCubic(clock/duration));
+      new_val = (int)newlight*(    easeInCubic(clock/duration));
+      break;
+    case 6:
+      old_val = (int)oldlight*(1 - easeOutCubic(clock/duration));
+      new_val = (int)newlight*(    easeOutCubic(clock/duration));
+      break;
+    case 7:
+      old_val = (int)oldlight*(1 - easeInOutCubic(clock/duration));
+      new_val = (int)newlight*(    easeInOutCubic(clock/duration));
+      break;
+    case 8:
+      old_val = (int)oldlight*(1 - easeInQuart(clock/duration));
+      new_val = (int)newlight*(    easeInQuart(clock/duration));
+      break;
+    case 9:
+      old_val = (int)oldlight*(1 - easeOutQuart(clock/duration));
+      new_val = (int)newlight*(    easeOutQuart(clock/duration));
+      break;
+    case 10:
+      old_val = (int)oldlight*(1 - easeInOutQuart(clock/duration));
+      new_val = (int)newlight*(    easeInOutQuart(clock/duration));
+      break;
+    case 11:
+      old_val = (int)oldlight*(1 - easeInQuint(clock/duration));
+      new_val = (int)newlight*(    easeInQuint(clock/duration));
+      break;
+    case 12:
+      old_val = (int)oldlight*(1 - easeOutQuint(clock/duration));
+      new_val = (int)newlight*(    easeOutQuint(clock/duration));
+      break;
+    case 13:
+      old_val = (int)oldlight*(1 - easeInOutQuint(clock/duration));
+      new_val = (int)newlight*(    easeInOutQuint(clock/duration));
+      break;
+    default:
+      old_val = (int)oldlight*(1 - easeLinear(clock/duration));
+      new_val = (int)newlight*(    easeLinear(clock/duration));
+      break;
   }
 
   return old_val + new_val;
@@ -302,6 +296,15 @@ void addLighting(Port* p, Lighting* l){
 
 void loop() {
 //Read from Serial to see if there's anything to update
+  if(Serial.available() > 0){
+    uint8_t len = Serial.read();
+    if(len == 2){
+      readCommand();
+    }
+    if(len == 8){
+      readColor();
+    }
+  }
 
   for(int i = 0; i < port_qty; i++){
     tick(&ports[i]);
@@ -315,6 +318,13 @@ void debug(char arr[] ){
   }
 }
 
+void readCommand(){
+
+}
+
+void readColor(){
+
+}
 
 bool areEqual(Lighting* L1, Lighting* L2){
   return ((L2->r == L1->r) &&
@@ -516,6 +526,13 @@ void runtests(){
   
   tick(&P2);
   assert(areEqual(P2.current_lighting, &DEFAULTLIGHTING));
+
+
+  assert(P2.colors[RED] = DEFAULTLIGHTING.r);
+  assert(P2.colors[GREEN] = DEFAULTLIGHTING.g);
+  assert(P2.colors[BLUE] = DEFAULTLIGHTING.b);
+
+
   Serial.println(F("Tick gives expected DefaultLighting on empty port"));
   tick(&P2);
   assert(areEqual(P2.current_lighting, &DEFAULTLIGHTING));
@@ -524,11 +541,20 @@ void runtests(){
 
   Serial.println(F("Testing on populated queues - P1"));
   tick(&P1);
-  delay(500);
+
+
+  assert(P1.colors[RED] < L3.r);
+
+
   assert(areEqual(P1.current_lighting, &L3));
   Serial.println(F("Gotten alert as expected"));
   delay(500);
   tick(&P1);    // 0 on L1
+
+
+  assert(P1.colors[RED] > 0);
+
+
   // 
   //   Serial.println(P1.clock);
   Serial.println(P1.current_lighting->is_alert);
@@ -586,3 +612,18 @@ delay(500);
 
 
 }
+
+float easeNone(float t) { return t<.5? (float)0 : (float)1;}                                        //case 0
+float easeLinear(float t) { return float(t);}                                                       //case 1
+float easeInQuad(float t) { return float(t*t);}                                                     //case 2
+float easeOutQuad(float t) { return float(t)*(2-t);}                                                //case 3
+float easeInOutQuad(float t) { return t<.5 ? float(2*t*(t)) : float(-1+float(4-2*t)*float(t));}     //case 4
+float easeInCubic(float t) { return (float)t*t*t;}                                                  //case 5
+float easeOutCubic(float t) { return (float)(--t)*t*t+1;}                                           //case 6
+float easeInOutCubic(float t) { return t<.5 ? (float)4*t*t*t : (float)(t-1)*(2*t-2)*(2*t-2)+1;}     //case 7
+float easeInQuart(float t) { return (float)t*t*t*t;}                                                //case 8
+float easeOutQuart(float t) { return (float)1-(--t)*t*t*t;}                                         //case 9
+float easeInOutQuart(float t) { return t<.5 ? (float)8*t*t*t*t : (float)1-8*(--t)*t*t*t;}           //case 10
+float easeInQuint(float t) { return t*t*t*t*t;}                                                     //case 11
+float easeOutQuint(float t) { return 1+(--t)*t*t*t*t;}                                              //case 12
+float easeInOutQuint(float t) { return t<.5 ? 16*t*t*t*t*t : 1+16*(--t)*t*t*t*t;}                   //case 13

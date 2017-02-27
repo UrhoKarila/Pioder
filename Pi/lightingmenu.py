@@ -142,10 +142,11 @@ def addeffect():
 		elif options[choice] == 'transition duration':
 			values['transition duration']	= bigclamp(int(raw_input('Give a value: ')))
 		elif options[choice] == 'transition type':
-			values['transition type'] = submenu({'0': "linear",
-												 '1': "QuadIn",
-												 '2': "QuadOut",
-												 '3': "QuadInOut"})
+			values['transition type'] = submenu({'0': "none",
+												 '1': "linear",
+												 '2': "QuadIn",
+												 '3': "QuadOut",
+												 '4': "QuadInOut"})
 
 		# elif options[choice] == 'add ingredient requirements':
 		# 	ing = getallingredients()
