@@ -12,6 +12,36 @@ const int tick_rate = 10;    //How often to update lights, in ms
 const int array_size = 16;
 const bool debug_mode_enabled = true;
 
+float easeNone(float t) { return t<.5? (float)0 : (float)1;}                                        //case 0
+float easeLinear(float t) { return float(t);}                                                       //case 1
+float easeInQuad(float t) { return float(t*t);}                                                     //case 2
+float easeOutQuad(float t) { return float(t)*(2-t);}                                                //case 3
+float easeInOutQuad(float t) { return t<.5 ? float(2*t*(t)) : float(-1+float(4-2*t)*float(t));}     //case 4
+float easeInCubic(float t) { return (float)t*t*t;}                                                  //case 5
+float easeOutCubic(float t) { return (float)(--t)*t*t+1;}                                           //case 6
+float easeInOutCubic(float t) { return t<.5 ? (float)4*t*t*t : (float)(t-1)*(2*t-2)*(2*t-2)+1;}     //case 7
+float easeInQuart(float t) { return (float)t*t*t*t;}                                                //case 8
+float easeOutQuart(float t) { return (float)1-(--t)*t*t*t;}                                         //case 9
+float easeInOutQuart(float t) { return t<.5 ? (float)8*t*t*t*t : (float)1-8*(--t)*t*t*t;}           //case 10
+float easeInQuint(float t) { return t*t*t*t*t;}                                                     //case 11
+float easeOutQuint(float t) { return 1+(--t)*t*t*t*t;}                                              //case 12
+float easeInOutQuint(float t) { return t<.5 ? 16*t*t*t*t*t : 1+16*(--t)*t*t*t*t;}                   //case 13
+
+float (*easingFunctions[14])(float t) = {easeNone,
+                          easeLinear,
+                          easeInQuad,
+                          easeOutQuad,
+                          easeInOutQuad,
+                          easeInCubic,
+                          easeOutCubic,
+                          easeInOutCubic,
+                          easeInQuart,
+                          easeOutQuart,
+                          easeInOutQuart,
+                          easeInQuint,
+                          easeOutQuint,
+                          easeInOutQuint};
+
 typedef struct {
   uint8_t r;
   uint8_t g;
@@ -152,7 +182,15 @@ void tick(Port* port){
 
   for(uint8_t i = 0; i < 3; i++){
     //analogWrite
+    port->colors[i] = getEasing(&port->old_lighting, port->current_lighting, clock);
+    analogWrite(port->pins[i], port->colors[i]);
   }
+}
+
+uint8_t getEasing(Lighting* old, Lighting* new){
+  int old_val = (int)255*(1 - *easingFunctions[old->transition_style](clock/old->duration));
+  int new_val = (int)255*(    *easingFunctions[new->transition_style](clock/new->duration));
+  return old_val + new_val;
 }
 
 void clearLighting(Lighting *light){
@@ -218,13 +256,6 @@ void debug(char arr[] ){
   }
 }
 
-float easeLinear(float t) { return float(t) ;}
-float easeInQuad(float t) { return float(t*t) ;}
-float easeOutQuad(float t) { return float(t)*(2-t) ;}
-float easeInOutQuad(float t) { return t<.5 ? float(2*t*(t)) : float(-1+float(4-2*t)*float(t)) ;}
-float easeInQuint(float t) { return t*t*t*t*t; }
-float easeOutQuint(float t) { return 1+(--t)*t*t*t*t; }
-float easeInOutQuint(float t) { return t<.5 ? 16*t*t*t*t*t : 1+16*(--t)*t*t*t*t; }
 
 bool areEqual(Lighting* L1, Lighting* L2){
   return ((L2->r == L1->r) &&
