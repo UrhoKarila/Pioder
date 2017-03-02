@@ -55,7 +55,7 @@ Port ports[port_qty];       //create array of ports
 Lighting DEFAULTLIGHTING;
 Lighting NULL_LIGHTING;
 
-uint8_t lighting_modifier[3];
+uint8_t lighting_modifier[3] = {255,255,255};
 
 void setup() {
   Serial.begin(9600); 
@@ -66,7 +66,6 @@ void setup() {
   // Serial.println(freeMemory());
   // delay(5000);
 
-  lighting_modifier = {255,255,255};
 
   Serial.println(F("Setup in progress"));
 
@@ -168,11 +167,11 @@ void tick(Port* port){
 
     //analogWrite
 
-  port->colors[RED] = (color_modifier[RED] * getEasing(port->old_lighting.r, port->current_lighting->r, port->clock, port->current_lighting->duration, port->current_lighting->transition_style)) / 255;
+  port->colors[RED] = (lighting_modifier[RED] * getEasing(port->old_lighting.r, port->current_lighting->r, port->clock, port->current_lighting->duration, port->current_lighting->transition_style)) / 255;
   analogWrite(port->pins[RED], port->colors[RED]);
-  port->colors[GREEN] = (color_modifier[GREEN] * getEasing(port->old_lighting.g, port->current_lighting->g, port->clock, port->current_lighting->duration, port->current_lighting->transition_style)) / 255;
+  port->colors[GREEN] = (lighting_modifier[GREEN] * getEasing(port->old_lighting.g, port->current_lighting->g, port->clock, port->current_lighting->duration, port->current_lighting->transition_style)) / 255;
   analogWrite(port->pins[GREEN], port->colors[GREEN]);
-  port->colors[BLUE] = (color_modifier[BLUE] * getEasing(port->old_lighting.b, port->current_lighting->b, port->clock, port->current_lighting->duration, port->current_lighting->transition_style)) / 255;
+  port->colors[BLUE] = (lighting_modifier[BLUE] * getEasing(port->old_lighting.b, port->current_lighting->b, port->clock, port->current_lighting->duration, port->current_lighting->transition_style)) / 255;
   analogWrite(port->pins[BLUE], port->colors[BLUE]);
   
 }
